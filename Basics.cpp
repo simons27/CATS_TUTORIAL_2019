@@ -47,6 +47,7 @@ double Basics_PionCoulombCorrection(const bool& Identical){
 }
 
 //computes the expectation based on quantum statistics only
+//the formula used is from chapter 4.1 in Phys. Rev. C 96 (2017) 064908 (ATLAS paper on pipi correlations in p-Pb)
 TGraph* Basics_PiPiTheory(const bool& Identical, const bool& WithCoulomb){
     //load from a Mathematica output file
     FILE *InFileCBE;
