@@ -23,8 +23,8 @@ int main(int argc, char *argv[]){
     printf(" To find a bug: continue with this tutorial\n");
     printf("-------------------------------------------\n");
 
-    //ComparePionPion();
-    Basics_ProtonLambda();
+    ComparePionPion();
+    //Basics_ProtonLambda();
 
     return 0;
 }

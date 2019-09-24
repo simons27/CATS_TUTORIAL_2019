@@ -157,6 +157,7 @@ double CATS_FIT_PL(double* x, double* pars){
     //the last parameter says its a small change of the radius, which does not require a new computing grid (saves time)
     //however, the last step requires making sure a good initial value of the radius
     KITTY_CATS_FIT_PL->SetAnaSource(0,SourceSize,true);
+    //useful tip: this makes CATS to shut up and not flood your screen. Only errors will be displayed. Use nSilent to suppress even those
     KITTY_CATS_FIT_PL->SetNotifications(CATS::nError);
     KITTY_CATS_FIT_PL->KillTheCat();
     return Norm*(LambdaPar*KITTY_CATS_FIT_PL->EvalCorrFun(*x)+1.-LambdaPar);
