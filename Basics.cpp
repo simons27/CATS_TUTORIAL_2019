@@ -1,4 +1,5 @@
 
+#include "Basics.h"
 #include "CATS.h"
 #include "CATStools.h"
 #include "CATSconstants.h"
@@ -7,11 +8,6 @@
 #include "TF1.h"
 #include "TFile.h"
 #include "TH1F.h"
-
-const double Mass_Pi0 = 134.98;
-const double Mass_Pic = 139.57;
-const double Mass_p = 938.272;
-const double Mass_L = 1115.683;
 
 CATS* KITTY_CATS_FIT_PL;
 
