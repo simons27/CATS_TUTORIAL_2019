@@ -110,15 +110,18 @@ TGraph* Basics_PiPiCATS(const bool& Identical, const bool& WithCoulomb){
     //object for the parameters to be used by the source function
     CATSparameters SOURCE_PARS(CATSparameters::tSource,1,true);
     //set the first and only par (source size)
-    SOURCE_PARS.SetParameter(0,1.2);
+    SOURCE_PARS.SetParameter(0,2.2);
     //say to CATS which Source function to use, and with which parameter set
     PionKitty.SetAnaSource(Basics_Source_Gauss,SOURCE_PARS);
     PionKitty.SetUseAnalyticSource(true);
 
     //standard settings for a CATS object which has no strong interaction potential included
     PionKitty.SetNumChannels(1);
+    //#which channel, how many PWs
     PionKitty.SetNumPW(0,0);
+    //which channel, spin value
     PionKitty.SetSpin(0,0);
+    //which channel, weight
     PionKitty.SetChannelWeight(0, 1);
 
     //include the coulomb interaction. Q1Q2 is the multiplied charge numbers of the two particles
