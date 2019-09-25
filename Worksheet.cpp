@@ -1,5 +1,6 @@
 
 #include "Worksheet.h"
+#include "ExtendedCk.h"
 #include "Basics.h"
 #include "CATS.h"
 #include "CATStools.h"
@@ -80,3 +81,78 @@ void Worksheet_ProtonLambda(){
     delete fInput;
 
 }
+
+
+//
+DLM_Ck* Worksheet_SetUp_pL(){
+
+    const unsigned NumMomBins = 80;
+    const double kMin = 0;
+    const double kMax = 320;
+
+    CATSparameters SOURCE_PARS(CATSparameters::tSource,1,true);
+    SOURCE_PARS.SetParameter(0,1.3);
+
+    //#,#,POT_ID,POT_FLAG,t_tot,t1,t2,s,l,j
+    double PotPars1S0[8]={pL_UsmaniOli,0,0,0,0,0,0,0};
+    double PotPars3S1[8]={pL_UsmaniOli,0,0,0,0,1,0,1};
+    CATSparameters cPotPars1S0(CATSparameters::tPotential,8,true);
+    cPotPars1S0.SetParameters(PotPars1S0);
+    CATSparameters cPotPars3S1(CATSparameters::tPotential,8,true);
+    cPotPars3S1.SetParameters(PotPars3S1);
+
+    static CATS Kitty_pL;
+    Kitty_pL.SetMomBins(NumMomBins,kMin,kMax);
+    Kitty_pL.SetAnaSource(GaussSource,SOURCE_PARS);
+    Kitty_pL.SetAnaSource(0,SOURCE_PARS.GetParameter(0));
+    Kitty_pL.SetUseAnalyticSource(true);
+    Kitty_pL.SetMomentumDependentSource(false);
+    Kitty_pL.SetThetaDependentSource(false);
+    Kitty_pL.SetExcludeFailedBins(false);
+    Kitty_pL.SetQ1Q2(0);
+    Kitty_pL.SetPdgId(2212, 3122);
+    Kitty_pL.SetRedMass( (Mass_p*Mass_L)/(Mass_p+Mass_L) );
+    Kitty_pL.SetNumChannels(2);
+    Kitty_pL.SetNumPW(0,1);
+    Kitty_pL.SetNumPW(1,1);
+    Kitty_pL.SetSpin(0,0);
+    Kitty_pL.SetSpin(1,1);
+    Kitty_pL.SetChannelWeight(0, 1./4.);
+    Kitty_pL.SetChannelWeight(1, 3./4.);
+    Kitty_pL.SetShortRangePotential(0,0,fDlmPot,cPotPars1S0);
+    Kitty_pL.SetShortRangePotential(1,0,fDlmPot,cPotPars3S1);
+
+    Kitty_pL.KillTheCat();
+
+    DLM_Ck* Ck_pL = new DLM_Ck(1,0,Kitty_pL);
+    Ck_pL->Update();
+
+    RootFile_DlmCk("Worksheet_DlmCk.root","Ck_pL",Ck_pL);
+
+    return Ck_pL;
+}
+
+//potential: NN_AV18
+DLM_Ck* Worksheet_SetUp_pp(){
+    //#,#,POT_ID,POT_FLAG,t_tot,t1,t2,s,l,j
+    double PotPars1S0[8]={NN_AV18,v18_Coupled3P2,1,1,1,0,0,0};
+    double PotPars3P0[8]={NN_AV18,v18_Coupled3P2,1,1,1,1,1,0};
+    double PotPars3P1[8]={NN_AV18,v18_Coupled3P2,1,1,1,1,1,1};
+    double PotPars3P2[8]={NN_AV18,v18_Coupled3P2,1,1,1,1,1,2};
+    double PotPars1D2[8]={NN_AV18,v18_Coupled3P2,1,1,1,0,2,2};
+}
+
+//potential: pXim_HALQCD1
+DLM_Ck* Worksheet_SetUp_pXi(){
+    //#,#,POT_ID,POT_FLAG,t_tot,t1,t2,s,l,j
+    double PotParsI0S0[9]={pXim_HALQCD1,12,0,-1,1,0,0,0,0};
+    double PotParsI0S1[9]={pXim_HALQCD1,12,0,-1,1,1,0,1,0};
+    double PotParsI1S0[9]={pXim_HALQCD1,12,1,1,1,0,0,0,0};
+    double PotParsI1S1[9]={pXim_HALQCD1,12,1,1,1,1,0,1,0};
+}
+
+//Ck model: Lednicky_gauss_Sigma0 (only 1 source parameter, no interaction pars)
+DLM_Ck* Worksheet_SetUp_pSigma(){
+
+}
+

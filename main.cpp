@@ -1,5 +1,7 @@
 #include<iostream>
 #include "Basics.h"
+#include "ExtendedCk.h"
+
 #include "TROOT.h"
 #include "TGraph.h"
 #include "TFile.h"
@@ -23,8 +25,10 @@ int main(int argc, char *argv[]){
     printf(" To find a bug: continue with this tutorial\n");
     printf("-------------------------------------------\n");
 
-    ComparePionPion();
+    //ComparePionPion();
     //Basics_ProtonLambda();
+
+    Ck_pL_Ledni_Usmani();
 
     return 0;
 }

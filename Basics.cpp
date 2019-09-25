@@ -179,6 +179,7 @@ void Basics_ProtonLambda(){
     Kitty_pL.SetUseAnalyticSource(true);
     Kitty_pL.SetMomentumDependentSource(false);
     Kitty_pL.SetThetaDependentSource(false);
+    //should you include in the result any bins, where the Schroedinger solver failed
     Kitty_pL.SetExcludeFailedBins(false);
     Kitty_pL.SetQ1Q2(0);
     Kitty_pL.SetPdgId(2212, 3122);
@@ -201,9 +202,10 @@ void Basics_ProtonLambda(){
     POT_PARS_3S1.SetParameter(1,2137);
     POT_PARS_3S1.SetParameter(2,0.5);
     POT_PARS_3S1.SetParameter(3,0.2);
+    //WhichChannel,WhichPW,PotentialFunction,Parameters
     Kitty_pL.SetShortRangePotential(0,0,Basics_Potential_Usmani,POT_PARS_1S0);
     Kitty_pL.SetShortRangePotential(1,0,Basics_Potential_Usmani,POT_PARS_3S1);
-    //Kitty_pL.SetMaxNumThreads(4);
+    Kitty_pL.SetMaxNumThreads(4);
     Kitty_pL.KillTheCat();
 
     KITTY_CATS_FIT_PL = &Kitty_pL;
@@ -214,11 +216,11 @@ void Basics_ProtonLambda(){
     FITTER->SetParameter(0,1);FITTER->SetParLimits(0,0.5,2);
     FITTER->SetParameter(1,0.5);FITTER->SetParLimits(1,0,1);
     FITTER->SetParameter(2,SOURCE_PARS.GetParameter(0));FITTER->SetParLimits(2,0.5,3);
-    FITTER->SetParameter(3,POT_PARS_1S0.GetParameter(1));FITTER->SetParLimits(3,0.99*POT_PARS_1S0.GetParameter(1),1.01*POT_PARS_1S0.GetParameter(1));
-    FITTER->SetParameter(4,POT_PARS_1S0.GetParameter(2));FITTER->SetParLimits(4,0.99*POT_PARS_1S0.GetParameter(2),1.01*POT_PARS_1S0.GetParameter(2));
-    FITTER->SetParameter(5,POT_PARS_1S0.GetParameter(3));FITTER->SetParLimits(5,0.99*POT_PARS_1S0.GetParameter(3),1.01*POT_PARS_1S0.GetParameter(3));
+    //FITTER->SetParameter(3,POT_PARS_1S0.GetParameter(1));FITTER->SetParLimits(3,0.99*POT_PARS_1S0.GetParameter(1),1.01*POT_PARS_1S0.GetParameter(1));
+    //FITTER->SetParameter(4,POT_PARS_1S0.GetParameter(2));FITTER->SetParLimits(4,0.99*POT_PARS_1S0.GetParameter(2),1.01*POT_PARS_1S0.GetParameter(2));
+    //FITTER->SetParameter(5,POT_PARS_1S0.GetParameter(3));FITTER->SetParLimits(5,0.99*POT_PARS_1S0.GetParameter(3),1.01*POT_PARS_1S0.GetParameter(3));
 
-    //FITTER->FixParameter(1,0.6);
+    FITTER->FixParameter(1,0.6);
     FITTER->FixParameter(3,POT_PARS_1S0.GetParameter(1));
     FITTER->FixParameter(4,POT_PARS_1S0.GetParameter(2));
     FITTER->FixParameter(5,POT_PARS_1S0.GetParameter(3));
