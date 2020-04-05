@@ -110,7 +110,7 @@ TGraph* Basics_PiPiCATS(const bool& Identical, const bool& WithCoulomb){
     //object for the parameters to be used by the source function
     CATSparameters SOURCE_PARS(CATSparameters::tSource,1,true);
     //set the first and only par (source size)
-    SOURCE_PARS.SetParameter(0,2.2);
+    SOURCE_PARS.SetParameter(0,1.2);
     //say to CATS which Source function to use, and with which parameter set
     PionKitty.SetAnaSource(Basics_Source_Gauss,SOURCE_PARS);
     PionKitty.SetUseAnalyticSource(true);

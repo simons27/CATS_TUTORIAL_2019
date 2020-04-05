@@ -28,7 +28,8 @@ int main(int argc, char *argv[]){
     //ComparePionPion();
     //Basics_ProtonLambda();
 
-    Ck_pL_Ledni_Usmani();
+    //Ck_pL_Ledni_Usmani();
+    Ck_pp_Decomposition();
 
     return 0;
 }

@@ -134,12 +134,28 @@ DLM_Ck* Worksheet_SetUp_pL(){
 
 //potential: NN_AV18
 DLM_Ck* Worksheet_SetUp_pp(){
+
+    const unsigned NumMomBins = 80;
+    const double kMin = 0;
+    const double kMax = 320;
+
+    CATSparameters SOURCE_PARS(CATSparameters::tSource,1,true);
+    SOURCE_PARS.SetParameter(0,1.3);
+
     //#,#,POT_ID,POT_FLAG,t_tot,t1,t2,s,l,j
     double PotPars1S0[8]={NN_AV18,v18_Coupled3P2,1,1,1,0,0,0};
     double PotPars3P0[8]={NN_AV18,v18_Coupled3P2,1,1,1,1,1,0};
     double PotPars3P1[8]={NN_AV18,v18_Coupled3P2,1,1,1,1,1,1};
     double PotPars3P2[8]={NN_AV18,v18_Coupled3P2,1,1,1,1,1,2};
     double PotPars1D2[8]={NN_AV18,v18_Coupled3P2,1,1,1,0,2,2};
+
+    CATSparameters cPotPars1S0(CATSparameters::tPotential,8,true); cPotPars1S0.SetParameters(PotPars1S0);
+    CATSparameters cPotPars3P0(CATSparameters::tPotential,8,true); cPotPars3P0.SetParameters(PotPars3P0);
+    CATSparameters cPotPars3P1(CATSparameters::tPotential,8,true); cPotPars3P1.SetParameters(PotPars3P1);
+    CATSparameters cPotPars3P2(CATSparameters::tPotential,8,true); cPotPars3P2.SetParameters(PotPars3P2);
+    CATSparameters cPotPars1D2(CATSparameters::tPotential,8,true); cPotPars1D2.SetParameters(PotPars1D2);
+
+
 }
 
 //potential: pXim_HALQCD1
@@ -149,6 +165,10 @@ DLM_Ck* Worksheet_SetUp_pXi(){
     double PotParsI0S1[9]={pXim_HALQCD1,12,0,-1,1,1,0,1,0};
     double PotParsI1S0[9]={pXim_HALQCD1,12,1,1,1,0,0,0,0};
     double PotParsI1S1[9]={pXim_HALQCD1,12,1,1,1,1,0,1,0};
+
+
+
+
 }
 
 //Ck model: Lednicky_gauss_Sigma0 (only 1 source parameter, no interaction pars)

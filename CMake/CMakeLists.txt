@@ -41,7 +41,8 @@ string(REGEX REPLACE "\n$" "" CATS_INCLUDE "${CATS_INCLUDE}")
 string(REGEX REPLACE "\n$" "" CATS_LIBS "${CATS_LIBS}")
 
 #string(APPEND CFLAGS " -O2 -std=c++11 -lgomp -pthread -fopenmp  ")
-string(APPEND CFLAGS " -O2 -std=c++11 -pthread ")
+set(CFLAGS " -O2 -std=c++11 -pthread ${CFLAGS}")
+#string(APPEND CFLAGS " -O2 -std=c++11 -pthread ")
 
 find_package(OpenMP)
 if (OPENMP_FOUND)
