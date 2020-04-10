@@ -9,12 +9,15 @@
 #include "DLM_Source.h"
 #include "DLM_CkDecomposition.h"
 #include "DLM_CkModels.h"
+#include "DLM_Random.h"
+#include "DLM_CppTools.h"
 
 #include "TGraph.h"
 #include "TString.h"
 #include "TF1.h"
 #include "TFile.h"
 #include "TH1F.h"
+#include "TNtuple.h"
 
 ///An example how to compute the pLambda correlation function using the Usmani potential and the Lednicky model
 void Ck_pL_Ledni_Usmani(){
@@ -170,6 +173,125 @@ void CATS_GaussSource(CATS& Kitty, const double& SourceSize){
     //for the Gaussian example above, both options should be completely identical
     Kitty.SetAutoNormSource(false);
 }
+//initialize the Gauss core + resonances for the CATS object
+//note that the core is more generic than that, and is in the form of a Levy-Stable distributions,
+//which is a class of distributions to which the Cauchy (Alpha=1) and Gauss (Alpha=2) are special cases.
+//fracreso gives the fraction of resonance feeding into your protons, taureso is the avg lifetime of the resonances, massreso is the avg mass
+//the cutoff sets the limit for the maximum allowed relative momentum of the daughters (ideally it should be a small number, in reality c.a. 200 MeV works)
+//the returned pointer is to the source object, that must not be deleted while the CATS object is used. You should delete it after that, to avoid memory leaks
+DLM_CleverMcLevyResoTM* CATS_ResoSource_pp(CATS& Kitty, const double& SourceSize, const double& Alpha, const bool& FixAlpha,
+                        const double& fracreso, const double& taureso, const double& massreso, const double& cutoff){
+
+    //In the DLM_Source.h there is a special class created to model this scenario, called DLM_CleverMcLevyResoTM
+    //Note, that if you want to create some fancy source class as well, you can do this by following the skeleton
+    //provided by the base class 'CatsSource', from which you should inherit (see the implementation of DLM_CleverMcLevyResoTM as an example)
+
+    //create the source object
+    //this object must NOT be deleted while the program is running
+    DLM_CleverMcLevyResoTM* CleverMcLevyResoTM_pp = new DLM_CleverMcLevyResoTM();;
+
+    //standard initialization of DLM_CleverMcLevyResoTM in the following:
+    //sets up a discrete grid size, on which only a finite amount of source evaluations will be performed to save CPU time
+    //the source function will be extrapolated to the desired parameters.
+    if(FixAlpha) CleverMcLevyResoTM_pp->InitStability(1,Alpha-1e-6,Alpha+1e-6);//only a single grid point for the Alpha
+    else CleverMcLevyResoTM_pp->InitStability(21,1,2);
+    //this sets the possible source sizes between 0.4 and 3 fm. Typically should provide good cover of all ranges, but take care you do not go outside
+    CleverMcLevyResoTM_pp->InitScale(52,0.4,3.0);
+    CleverMcLevyResoTM_pp->InitRad(400,0,64);
+    //do not change this ever, no questions asked
+    CleverMcLevyResoTM_pp->InitType(2);
+    //for different particle species, e.g. pL, you will need to setup the 0th and 1st particle differently
+    CleverMcLevyResoTM_pp->SetUpReso(0,fracreso);
+    CleverMcLevyResoTM_pp->SetUpReso(1,fracreso);
+
+    Float_t k_D,fP1,fP2,fM1,fM2,Tau1,Tau2,AngleRcP1,AngleRcP2,AngleP1P2;
+    DLM_Random RanGen(11);
+    double RanVal1,RanVal2;
+
+    //this is a TNtuple containing the relevant information from your transport model, which is to be used to model the kinematics.
+    //The variables are those used in eq.19 of the analysis note here: https://alice-notes.web.cern.ch/node/891
+    //if you do not have access there, write me an email
+    //N.B. ALL these observables should be evaluated in the CM frame of the two final particle you study!
+    //To set up such an TNtuple: be creative :) In case of difficulties (or if you need EPOS output) write me or Max an email and we can discuss.
+    //we actually have two TNtuple, one for the case of primary-secondary protons, and one for secondary-secondary. Note that for non-identical particles
+    //you will also have to consider separately secondary-primary.
+    TFile* F_EposDisto_p_pReso = new TFile("/home/dmihaylov/Dudek_Ubuntu/Work/Kclus/GeneralFemtoStuff/CATS_TUTORIAL_2019/Files/EposDisto_p_pReso.root");
+    TNtuple* T_EposDisto_p_pReso = (TNtuple*)F_EposDisto_p_pReso->Get("InfoTuple_ClosePairs");
+    unsigned N_EposDisto_p_pReso = T_EposDisto_p_pReso->GetEntries();
+    T_EposDisto_p_pReso->SetBranchAddress("k_D",&k_D);
+    T_EposDisto_p_pReso->SetBranchAddress("P1",&fP1);T_EposDisto_p_pReso->SetBranchAddress("P2",&fP2);
+    T_EposDisto_p_pReso->SetBranchAddress("M1",&fM1);T_EposDisto_p_pReso->SetBranchAddress("M2",&fM2);
+    T_EposDisto_p_pReso->SetBranchAddress("Tau1",&Tau1);T_EposDisto_p_pReso->SetBranchAddress("Tau2",&Tau2);
+    T_EposDisto_p_pReso->SetBranchAddress("AngleRcP1",&AngleRcP1);T_EposDisto_p_pReso->SetBranchAddress("AngleRcP2",&AngleRcP2);T_EposDisto_p_pReso->SetBranchAddress("AngleP1P2",&AngleP1P2);
+    //iterate over the TNtuple to give the source the needed input
+    //this is where the magic happens. The idea is, that we give the source some amount of vectors corresponding to s_res1/2 in fig. 20 of the analysis note
+    //the source will than build the source by random sampling the core and putting on top some of these vectors,
+    //to evaluate the resulting separation between the daughters (final particles of interest). We can either use the information fully from our TNtuple, i.e.
+    //take the information about Tau, Mass, Momentum and angles from our transfer model, or use some averaged values. The latter is used since in EPOS we often do not
+    //have all resonance we want, so we used some dummy resonances just to obtain a sample with the correct average mass and kinematic properties, although the lifetimes
+    //could differ, and the individual masses wrong.
+    for(unsigned uEntry=0; uEntry<N_EposDisto_p_pReso; uEntry++){
+        T_EposDisto_p_pReso->GetEntry(uEntry);
+        Tau1 = 0;
+        //the values were provided from the statistical hadronization model, we rewrite the EPOS output
+        Tau2 = taureso;
+        fM2 = massreso;
+        //reject daughters with too high relative momenta
+        if(k_D>cutoff) continue;
+        //sample randomly the fly length of the resonance
+        RanVal1 = RanGen.Exponential(fM2/(fP2*Tau2));
+        //plug in the result for the primordial-resonance case
+        CleverMcLevyResoTM_pp->AddBGT_PR(RanVal1,-cos(AngleRcP2));
+        //plug in the result for the primordial-resonance case. For identical particle it is symmetric, apart the sign of the cosine.vid
+        CleverMcLevyResoTM_pp->AddBGT_RP(RanVal1,cos(AngleRcP2));
+    }
+    delete F_EposDisto_p_pReso;
+
+    //do exactly the same thing for the reso-reso case
+    TFile* F_EposDisto_pReso_pReso = new TFile("/home/dmihaylov/Dudek_Ubuntu/Work/Kclus/GeneralFemtoStuff/CATS_TUTORIAL_2019/Files/EposDisto_pReso_pReso.root");
+    TNtuple* T_EposDisto_pReso_pReso = (TNtuple*)F_EposDisto_pReso_pReso->Get("InfoTuple_ClosePairs");
+    unsigned N_EposDisto_pReso_pReso = T_EposDisto_pReso_pReso->GetEntries();
+    T_EposDisto_pReso_pReso->SetBranchAddress("k_D",&k_D);
+    T_EposDisto_pReso_pReso->SetBranchAddress("P1",&fP1);T_EposDisto_pReso_pReso->SetBranchAddress("P2",&fP2);
+    T_EposDisto_pReso_pReso->SetBranchAddress("M1",&fM1);T_EposDisto_pReso_pReso->SetBranchAddress("M2",&fM2);
+    T_EposDisto_pReso_pReso->SetBranchAddress("Tau1",&Tau1);T_EposDisto_pReso_pReso->SetBranchAddress("Tau2",&Tau2);
+    T_EposDisto_pReso_pReso->SetBranchAddress("AngleRcP1",&AngleRcP1);T_EposDisto_pReso_pReso->SetBranchAddress("AngleRcP2",&AngleRcP2);T_EposDisto_pReso_pReso->SetBranchAddress("AngleP1P2",&AngleP1P2);
+    for(unsigned uEntry=0; uEntry<N_EposDisto_pReso_pReso; uEntry++){
+        T_EposDisto_pReso_pReso->GetEntry(uEntry);
+        Tau1 = taureso;
+        Tau2 = taureso;
+        fM1 = massreso;
+        fM2 = massreso;
+        if(k_D>cutoff) continue;
+        RanVal1 = RanGen.Exponential(fM1/(fP1*Tau1));
+        RanVal2 = RanGen.Exponential(fM2/(fP2*Tau2));
+        CleverMcLevyResoTM_pp->AddBGT_RR(RanVal1,cos(AngleRcP1),RanVal2,cos(AngleRcP2),cos(AngleP1P2));
+    }
+    delete F_EposDisto_pReso_pReso;
+
+    //the Gauss and Cauchy cases are evaluated much faster, so we can allow ourselves more iterations
+    //the number of iter. here is how many entries will the final pdf of the source function contain
+    if(FixAlpha&&(Alpha==1||Alpha==2)) CleverMcLevyResoTM_pp->InitNumMcIter(1000000);
+    else CleverMcLevyResoTM_pp->InitNumMcIter(100000);
+
+    //The CatsSourceForwarder is a technicality that you should not care about,
+    //here it is important to know that the source function is passed into cats by a pointer to the object
+    //CleverMcLevyResoTM, and the number of parameters of the source.
+    Kitty.SetAnaSource(CatsSourceForwarder, CleverMcLevyResoTM_pp, 2);
+    //and this, as aways, is the way to communicate with CATS and set the source size
+    Kitty.SetAnaSource(0,SourceSize);
+    Kitty.SetAnaSource(1,Alpha);
+
+    //this is important, since if its `false` it is assumed that the source will be sampled from a transport model, and the Gaussian function will not be used
+    Kitty.SetUseAnalyticSource(true);
+    //if true, the source is automatically renormalized in the range 0-64 fm. Nice to dummy proof the source, but problematic for sources with large tails
+    //For the core+reso case we could easily have large tails, so this is quite important to set as false
+    Kitty.SetAutoNormSource(false);
+
+    return CleverMcLevyResoTM_pp;
+}
+
+
 //Basic initialization of a CATS object for pp, WITHOUT any setup of the source or interaction
 void CATS_pp_Basic(CATS& Kitty, const unsigned& NumMomBins, const double& kMin, const double& kMax){
     Kitty.SetMomBins(NumMomBins,kMin,kMax);
@@ -426,9 +548,19 @@ double ExampleFitter_pp(double* x, double* par){
 }
 
 ///an example how compute the pp theoretical correlation
-void Ck_pp_Decomposition(){
-    TString OutputFileName = "../OutputFiles/Ck_pp_Decomposition.root";
-    const double SourceSize = 1.2;
+//for the source type, we have either 'Gauss' or 'CoreReso'
+void Ck_pp_Decomposition(const TString& SourceType){
+    //timer
+    DLM_Timer TIMER;
+    printf("\033[1;37mExecuting Ck_pp_Decomposition for SourceType=='%s'\033[0m\n\n",SourceType.Data());
+    if(SourceType!="Gauss"&&SourceType!="CoreReso"){printf("\033[1;31mERROR:\033[0m Non-existing source '%s'\n",SourceType.Data()); return;}
+    TString OutputFileName = "../OutputFiles/Ck_pp_Decomposition_"+SourceType+".root";
+    //set the source size slightly smaller for the Gauss+Reso scenario.
+    const double SourceSize = SourceType=="Gauss"?1.2:1.1;
+    //the source sizes for the feed downs. There we aways use a Gaussian source (to save CPU time)
+    //these values are more or less in tone with our HM analysis
+    const double SourceSize_pL = 1.3;
+    const double SourceSize_pXim = 1.0;
     //these are for the CATS object
     const double NumMomBins = 100;
     const double kMin = 0;
@@ -439,32 +571,45 @@ void Ck_pp_Decomposition(){
     const double FitMin = 0;
     const double FitMax = 350;
 
-    CATS Kitty_pp;
-    //initialize a Gaussian source with a source size of 1.2
-    CATS_GaussSource(Kitty_pp,SourceSize);
+    CATS Kitty_pp_s;
+    //initialize a Gaussian source
+    if(SourceType=="Gauss") CATS_GaussSource(Kitty_pp_s,SourceSize);
+    //initialize a Gaussian core + reso source
+    DLM_CleverMcLevyResoTM* CRS_pp = NULL;
+    if(SourceType=="CoreReso") CRS_pp = CATS_ResoSource_pp(Kitty_pp_s,SourceSize,2,true,0.6422,1.65,1362,200);
+
     //you can change the parameters of the source at any time using the function:
-    //Kitty_pp.SetAnaSource(#WhichParameter,#Value);
+    //Kitty_pp_s.SetAnaSource(#WhichParameter,#Value);
     //set up the CATS object for pp (Coulomb and QS) with 100 bins in the range 0-400 MeV
-    CATS_pp_Basic(Kitty_pp,NumMomBins,kMin,kMax);
+    CATS_pp_Basic(Kitty_pp_s,NumMomBins,kMin,kMax);
     //set up the cats interaction including only s-waves
-    CATS_pp_AV18(Kitty_pp,false,false);
+    CATS_pp_AV18(Kitty_pp_s,false,false);
     //compute the correlation function
-    Kitty_pp.KillTheCat();
+    printf(" Executing KillTheCat for Kitty_pp_s\n");
+    Kitty_pp_s.KillTheCat();
     //set up a `histogram` for the pp interaction, based on the above CATS object
     //the arguments are the number of source/potential parameters to be controlled by DLM_Ck
-    DLM_Ck Ck_pp(Kitty_pp.GetNumSourcePars(),0,Kitty_pp);
+    DLM_Ck Ck_pp_s(Kitty_pp_s.GetNumSourcePars(),0,Kitty_pp_s);
     //btw, now you can change the source parameters also by using:
-    //Ck_pp.SetSourcePar(#WhichParameter,#Value);
+    //Ck_pp_s.SetSourcePar(#WhichParameter,#Value);
     //this function reads the CATS objects and fills the bins of the DLM_Ck object
-    Ck_pp.Update();
+    Ck_pp_s.Update();
     //save the correlation (theoretical at the moment) in a file
-    RootFile_DlmCk(OutputFileName, "Ck_pp_sWaves", &Ck_pp);
+    RootFile_DlmCk(OutputFileName, "Ck_pp_sWaves", &Ck_pp_s);
 
     //the same for s and p-waves
     CATS Kitty_pp_sp;
-    CATS_GaussSource(Kitty_pp_sp,SourceSize);
+    if(SourceType=="Gauss") CATS_GaussSource(Kitty_pp_sp,SourceSize);
+    DLM_CleverMcLevyResoTM* CRS_pp_sp = NULL;
+    if(SourceType=="CoreReso") CRS_pp_sp = CATS_ResoSource_pp(Kitty_pp_sp,SourceSize,2,true,0.6422,1.65,1362,200);
     CATS_pp_Basic(Kitty_pp_sp,100,0,400);
     CATS_pp_AV18(Kitty_pp_sp,true,false);
+    printf(" Executing KillTheCat for Kitty_pp_sp\n");
+    //this function can be used to reduce the CATS output if annoying to you.
+    //CATS::nWarning only prints Warnings and Errors
+    //CATS::nError only prints Errors
+    //CATS::nError silent completely removes all messages
+    Kitty_pp_sp.SetNotifications(CATS::nWarning);
     Kitty_pp_sp.KillTheCat();
     DLM_Ck Ck_pp_sp(Kitty_pp_sp.GetNumSourcePars(),0,Kitty_pp_sp);
     Ck_pp_sp.Update();
@@ -472,9 +617,13 @@ void Ck_pp_Decomposition(){
 
     //and now the same including d-waves
     CATS Kitty_pp_spd;
-    CATS_GaussSource(Kitty_pp_spd,SourceSize);
+    if(SourceType=="Gauss") CATS_GaussSource(Kitty_pp_spd,SourceSize);
+    DLM_CleverMcLevyResoTM* CRS_pp_spd = NULL;
+    if(SourceType=="CoreReso") CRS_pp_spd = CATS_ResoSource_pp(Kitty_pp_spd,SourceSize,2,true,0.6422,1.65,1362,200);
     CATS_pp_Basic(Kitty_pp_spd,100,0,400);
     CATS_pp_AV18(Kitty_pp_spd,true,true);
+    printf(" Executing KillTheCat for Kitty_pp_spd\n");
+    Kitty_pp_spd.SetNotifications(CATS::nWarning);
     Kitty_pp_spd.KillTheCat();
     DLM_Ck Ck_pp_spd(Kitty_pp_spd.GetNumSourcePars(),0,Kitty_pp_spd);
     Ck_pp_spd.Update();
@@ -482,18 +631,22 @@ void Ck_pp_Decomposition(){
 
     //we will include feed-downs from Lambda and Xi, thus we need to compute pL and pXi correlations as well
     CATS Kitty_pL_Usmani;
-    CATS_GaussSource(Kitty_pL_Usmani,SourceSize);
+    CATS_GaussSource(Kitty_pL_Usmani,SourceSize_pL);
     CATS_pL_Basic(Kitty_pL_Usmani,100,0,400);
     CATS_pL_Usmani(Kitty_pL_Usmani);
+    printf(" Executing KillTheCat for Kitty_pL_Usmani\n");
+    Kitty_pL_Usmani.SetNotifications(CATS::nWarning);
     Kitty_pL_Usmani.KillTheCat();
     DLM_Ck Ck_pL_Usmani(Kitty_pL_Usmani.GetNumSourcePars(),0,Kitty_pL_Usmani);
     Ck_pL_Usmani.Update();
     RootFile_DlmCk(OutputFileName, "Ck_pL_Usmani", &Ck_pL_Usmani);
 
     CATS Kitty_pXim_Hal;
-    CATS_GaussSource(Kitty_pXim_Hal,SourceSize);
+    CATS_GaussSource(Kitty_pXim_Hal,SourceSize_pXim);
     CATS_pXim_Basic(Kitty_pXim_Hal,100,0,400);
     CATS_pXim_Hal(Kitty_pXim_Hal);
+    printf(" Executing KillTheCat for Kitty_pXim_Hal\n");
+    Kitty_pXim_Hal.SetNotifications(CATS::nWarning);
     Kitty_pXim_Hal.KillTheCat();
     DLM_Ck Ck_pXim_Hal(Kitty_pXim_Hal.GetNumSourcePars(),0,Kitty_pXim_Hal);
     Ck_pXim_Hal.Update();
@@ -558,12 +711,10 @@ void Ck_pp_Decomposition(){
     TH1F* hExpCk = GetExpCorrelation(DataFileName,DataHistoName);
     //small but important detail: turn off the standard CATS output, leaving only Warnings and Errors
     //this is needed to avoid a ton of output during the fitting!
-    Kitty_pp.SetNotifications(CATS::nWarning);
-    Kitty_pL_Usmani.SetNotifications(CATS::nWarning);
-    Kitty_pXim_Hal.SetNotifications(CATS::nWarning);
+    Kitty_pp_spd.SetNotifications(CATS::nWarning);
     //set the pointer to the object that we want to use in ExampleFitter_pp
     Ck_ExampleFitter_pp = &CkDec_pp;
-    printf("Fitting begins now!\n");
+    printf(" Fitting begins now!\n");
     //we set up a TF1 fitter, which will use a custom function made such as to use the
     //pointer to the DLM_CkDecomposition of the p-p to perform the fit, which has 3 fit parameters
     TF1* fit_pp = new TF1("fit_pp",ExampleFitter_pp,FitMin,FitMax,3);
@@ -579,9 +730,10 @@ void Ck_pp_Decomposition(){
     fit_pp->FixParameter(2,0.);
     hExpCk->Fit(fit_pp, "S, N, R, M");
 
-    printf("The extracted source radius is: %.3f +/- %.3f fm\n",fit_pp->GetParameter(0),fit_pp->GetParError(0));
-    printf("The extracted BL norm is: %.3f +/- %.3f\n",fit_pp->GetParameter(1),fit_pp->GetParError(1));
-    printf("The extracted BL slope is: %.3e +/- %.3e 1/MeV\n",fit_pp->GetParameter(2),fit_pp->GetParError(2));
+    printf(" The extracted source radius is: %.3f +/- %.3f fm\n",fit_pp->GetParameter(0),fit_pp->GetParError(0));
+    printf(" The extracted BL norm is: %.3f +/- %.3f\n",fit_pp->GetParameter(1),fit_pp->GetParError(1));
+    printf(" The extracted BL slope is: %.3e +/- %.3e 1/MeV\n",fit_pp->GetParameter(2),fit_pp->GetParError(2));
+    printf(" chi2/ndf = %.2f/%i = %.2f\n",fit_pp->GetChisquare(),fit_pp->GetNDF(),fit_pp->GetChisquare()/double(fit_pp->GetNDF()));
 
     TFile* fOutput = new TFile(OutputFileName,"update");
     hResolution_pp->Write("",TObject::kOverwrite);
@@ -596,4 +748,17 @@ void Ck_pp_Decomposition(){
     delete hExpCk;
     delete fit_pp;
     delete fOutput;
+
+    //don't forget to delete the source ones its not needed
+    delete CRS_pp;
+    delete CRS_pp_sp;
+    delete CRS_pp_spd;
+
+    //print out the timer information
+    long long ExeTime = TIMER.Stop()/1000.;
+    char* strtime = new char [128];
+    ShowTime(ExeTime,strtime,0,true,6);
+    printf("\nExecution time of Ck_pp_Decomposition for SourceType='%s': %s\n",SourceType.Data(),strtime);
+    delete [] strtime;
+
 }

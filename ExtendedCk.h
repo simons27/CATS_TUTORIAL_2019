@@ -9,4 +9,4 @@ void RootFile_DlmCk(const TString& RootFileName, const TString& GraphName, DLM_C
 //save in a file the correlation function from DLM_CkDecomposition
 void RootFile_DlmCk(const TString& RootFileName, const TString& GraphName, DLM_CkDecomposition* CkToPlot, bool PlotIndividualContributions=false);
 
-void Ck_pp_Decomposition();
+void Ck_pp_Decomposition(const TString& SourceType);

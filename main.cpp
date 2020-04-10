@@ -29,7 +29,8 @@ int main(int argc, char *argv[]){
     //Basics_ProtonLambda();
 
     //Ck_pL_Ledni_Usmani();
-    Ck_pp_Decomposition();
+    Ck_pp_Decomposition("Gauss");
+    Ck_pp_Decomposition("CoreReso");
 
     return 0;
 }
