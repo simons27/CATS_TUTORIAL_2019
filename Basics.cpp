@@ -8,6 +8,7 @@
 #include "TF1.h"
 #include "TFile.h"
 #include "TH1F.h"
+//#include "TCanvas.h"
 
 CATS* KITTY_CATS_FIT_PL;
 
@@ -47,7 +48,7 @@ double Basics_PionCoulombCorrection(const bool& Identical){
 TGraph* Basics_PiPiTheory(const bool& Identical, const bool& WithCoulomb){
     //load from a Mathematica output file
     FILE *InFileCBE;
-    const TString CBEname = "../Mathematica/tab_txCBE.dat";
+    const TString CBEname = "../Mathematica/tab_txCBE.dat"; // changed to match actual exec. location
     InFileCBE = fopen(CBEname.Data(), "r");
     if(!InFileCBE){
         printf("\033[1;31mERROR:\033[0m The file\033[0m %s cannot be opened!\n", CBEname.Data());
@@ -149,7 +150,8 @@ TGraph* Basics_PiPiCATS(const bool& Identical, const bool& WithCoulomb){
 
 
 double CATS_FIT_PL(double* x, double* pars){
-    double& Norm = pars[0];
+   	// printf("CATS_FIT_PL has been called\n");
+	double& Norm = pars[0];
     double& LambdaPar = pars[1];
     double& SourceSize = pars[2];
     //set the radius to the fit value
@@ -167,7 +169,18 @@ void Basics_ProtonLambda(){
     const unsigned NumMomBins = 60;
     const double kMin = 0;
     const double kMax = 240;
-
+	class TCanvas;
+	Bool_t UseDummy = false;
+	Bool_t UseCanvas = true;
+	Double_t VarFactorLower = 0.5;
+	Double_t VarFactorUpper = 2.0;
+	TString InputFileName = "OutputFiles/CSV3_OutputPL01.root";
+	TString InputHistoName = "OutputHisto";
+	TString OutputFileName = "OutputFilePLFit.root"; // TODO: use TString::Replace von InputFile
+	if (UseDummy) {
+		TString InputFileName = "OutputFiles/DummyProtonLambda.root";
+		TString InputHistoName = "hDummyProtonLambda";
+	}
     //object for the parameters to be used by the source function
     CATSparameters SOURCE_PARS(CATSparameters::tSource,1,true);
     SOURCE_PARS.SetParameter(0,1.3);
@@ -210,24 +223,62 @@ void Basics_ProtonLambda(){
 
     KITTY_CATS_FIT_PL = &Kitty_pL;
 
-    TFile* fInput = new TFile("../Files/DummyProtonLambda.root","read");
-    TH1F* hInput = (TH1F*)fInput->Get("hDummyProtonLambda");
+    TFile* fInput = new TFile(InputFileName,"read");	// replaced "Files" with "OutputFiles"
+    TH1F* hInput = (TH1F*)fInput->Get(InputHistoName);
+	//
+	//adding section for the GeV->MeV rescaling:
+	printf("hInput range: %f - %f\n", hInput->GetXaxis()->GetXmin(), hInput->GetXaxis()->GetXmax());
+	printf("hInput Nbins: %d\n", hInput->GetNbinsX());
+	/*
+	TH1F* hInputRescaled = new TH1F("hInputRescaled", "hInputRescaled", (hInput->GetNbinsX())/3, 0, 500);
+    printf("Created Rescaled Histo\n");
+    for(unsigned uBin=1; uBin<=(hInput->GetNbinsX())/3; uBin++) hInputRescaled->SetBinContent(uBin, hInput->GetBinContent(uBin));
+    printf("Filled the Rescaled Histo\n");
+    for(unsigned uBin=1; uBin<=(hInput->GetNbinsX())/3; uBin++) hInputRescaled->SetBinError(uBin, hInput->GetBinError(uBin));
+	*/
+	//
+
+	TH1F* hInputRescaled = new TH1F("hInputRescaled", "hInputRescaled", (hInput->GetNbinsX())/12, 0, 250);
+    printf("Created Rescaled Histo\n");
+    for(unsigned uBin=1; uBin<=(hInput->GetNbinsX())/12; uBin++) hInputRescaled->SetBinContent(uBin, hInput->GetBinContent(uBin));
+    printf("Filled the Rescaled Histo\n");
+    for(unsigned uBin=1; uBin<=(hInput->GetNbinsX())/12; uBin++) hInputRescaled->SetBinError(uBin, hInput->GetBinError(uBin));
+	//
+
     TF1* FITTER = new TF1("FITTER",CATS_FIT_PL,kMin,kMax,6);
     FITTER->SetParameter(0,1);FITTER->SetParLimits(0,0.5,2);
     FITTER->SetParameter(1,0.5);FITTER->SetParLimits(1,0,1);
     FITTER->SetParameter(2,SOURCE_PARS.GetParameter(0));FITTER->SetParLimits(2,0.5,3);
-    //FITTER->SetParameter(3,POT_PARS_1S0.GetParameter(1));FITTER->SetParLimits(3,0.99*POT_PARS_1S0.GetParameter(1),1.01*POT_PARS_1S0.GetParameter(1));
-    //FITTER->SetParameter(4,POT_PARS_1S0.GetParameter(2));FITTER->SetParLimits(4,0.99*POT_PARS_1S0.GetParameter(2),1.01*POT_PARS_1S0.GetParameter(2));
-    //FITTER->SetParameter(5,POT_PARS_1S0.GetParameter(3));FITTER->SetParLimits(5,0.99*POT_PARS_1S0.GetParameter(3),1.01*POT_PARS_1S0.GetParameter(3));
+    
+	FITTER->SetParameter(3,POT_PARS_1S0.GetParameter(1));FITTER->SetParLimits(3,VarFactorLower*POT_PARS_1S0.GetParameter(1),VarFactorUpper*POT_PARS_1S0.GetParameter(1)); // originally at 0.99 and 1.01 respectively -> made wider
+    //FITTER->SetParameter(4,POT_PARS_1S0.GetParameter(2));FITTER->SetParLimits(4,VarFactorLower*POT_PARS_1S0.GetParameter(2),VarFactorUpper*POT_PARS_1S0.GetParameter(2));
+    //FITTER->SetParameter(5,POT_PARS_1S0.GetParameter(3));FITTER->SetParLimits(5,VarFactorLower*POT_PARS_1S0.GetParameter(3),VarFactorUpper*POT_PARS_1S0.GetParameter(3));
 
-    FITTER->FixParameter(1,0.6);
-    FITTER->FixParameter(3,POT_PARS_1S0.GetParameter(1));
+    //FITTER->FixParameter(1,0.6);
+
+    //FITTER->FixParameter(3,POT_PARS_1S0.GetParameter(1));
     FITTER->FixParameter(4,POT_PARS_1S0.GetParameter(2));
     FITTER->FixParameter(5,POT_PARS_1S0.GetParameter(3));
 
 
-    hInput->Fit(FITTER,"S, N, R, M");
+    //hInput->Fit(FITTER,"S, N, R, M");
+    hInputRescaled->Fit(FITTER,"S, N, R, M");
+    //hInputRescaled->Fit(FITTER,"R, M");
+	//Descriptions of Options from: https://root.cern.ch/root/htmldoc/guides/users-guide/FittingHistograms.html
+	//"S": The result of the fit is returned in the TFitResultPtr
+	//"N": Do not store the graphics function, donot draw
+	//"R": Use the range specified in the function range
+	//"M": Improve fit results, by using the IMPROVE algorithm of TMinuit
+	
+	TFile* fOut = TFile::Open(OutputFileName, "RECREATE");
+	fOut->cd();
+	hInput->Write();
+	hInputRescaled->Write();
+	FITTER->Write();
+	fOut->Close();
 
+
+	delete fOut;
     delete FITTER;
     delete fInput;
 }

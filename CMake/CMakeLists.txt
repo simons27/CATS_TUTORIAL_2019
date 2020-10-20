@@ -6,10 +6,13 @@ SET(PROJECT_NAME "CMake_CATS")
 
 project(${PROJECT_NAME})
 # SET PATHS #
-SET(PROJECT_DESTINATION "/home/dmihaylov/Dudek_Ubuntu/Work/Kclus/GeneralFemtoStuff/CATS_TUTORIAL_2019")#the destination of your project
+SET(PROJECT_DESTINATION "/home/sschneider/hhCorr/CATS_TUTORIAL_2019")#the destination of your project
+#SET(PROJECT_DESTINATION "/home/sschneider/Temp/CATS_TUTORIAL_2019")#the destination of your project
+# Added line to set root path:
+SET(ROOT_PATH "/cvmfs/alice.cern.ch/el6-x86_64/Packages/ROOT/v6-16-00-23")#path to ROOT
 SET(GSL_INCLUDE "/usr/include/gsl")#where are all GSL related .h files
 SET(GSL_LIB "/usr/lib")#where are the GSL .a and .so files
-SET(CATS_PATH "/home/dmihaylov/Apps/CATS")#the CATS main folder (containing cats-config)
+SET(CATS_PATH "/home/sschneider/Apps/CATS")#the CATS main folder (containing cats-config)
 SET(CATS_TYPE "dev")#basic, extended or dev
 
 SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_DESTINATION}/CMake/bin)
@@ -21,9 +24,9 @@ ${PROJECT_DESTINATION}/ExtendedCk.cpp
 ${PROJECT_DESTINATION}/Worksheet.cpp
 )
 # DO NOT CHANGE THE REST #
-
+# out-comment following two lines:
 file(STRINGS ${CATS_PATH}/bin/CMakeDLM.txt CMakeDLM)
-list(GET CMakeDLM 2 ROOT_PATH)
+#list(GET CMakeDLM 2 ROOT_PATH)
 message(STATUS "Using this ROOT location: ${ROOT_PATH}")
 
 execute_process(COMMAND bash -c "${ROOT_PATH}/bin/root-config --cflags" OUTPUT_VARIABLE CFLAGS)

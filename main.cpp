@@ -26,11 +26,16 @@ int main(int argc, char *argv[]){
     printf("-------------------------------------------\n");
 
     //ComparePionPion();
-    //Basics_ProtonLambda();
+    //printf("Done with ComparePionPion\n");
+
+    Basics_ProtonLambda();
+	printf("Done with Basics_ProtonLambda\n");
 
     //Ck_pL_Ledni_Usmani();
-    Ck_pp_Decomposition("Gauss");
-    Ck_pp_Decomposition("CoreReso");
+	//printf("Done with Ck_pL_Ledni_Usmani\n");
+ 
+    //Ck_pp_Decomposition("Gauss");
+    //Ck_pp_Decomposition("CoreReso");
 
     return 0;
 }
