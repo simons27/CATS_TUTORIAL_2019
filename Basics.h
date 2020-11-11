@@ -15,3 +15,11 @@ double Basics_Source_Gauss(double* Pars);
 TGraph* Basics_PiPiTheory(const bool& Identical, const bool& WithCoulomb);
 TGraph* Basics_PiPiCATS(const bool& Identical, const bool& WithCoulomb);
 void Basics_ProtonLambda();
+
+//new additions to allow for Lambda-Lambda-fitting:
+double Basics_Potential_DoubleGaussLambda(double* pars);
+void Basics_LambdaLambda();
+//double CATS_FIT_LL(double* x, double* pars);
+
+// added as internal check:
+void Check_Potential();

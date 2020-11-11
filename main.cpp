@@ -28,10 +28,16 @@ int main(int argc, char *argv[]){
     //ComparePionPion();
     //printf("Done with ComparePionPion\n");
 
-    Basics_ProtonLambda();
-	printf("Done with Basics_ProtonLambda\n");
+    //Basics_ProtonLambda();
+	//printf("Done with Basics_ProtonLambda\n");
 
-    //Ck_pL_Ledni_Usmani();
+    Basics_LambdaLambda();
+	printf("Done with Basics_LambdaLambda\n");
+ 
+	//Check_Potential();
+	//printf("Done with Check_Potential");
+	
+	//Ck_pL_Ledni_Usmani();
 	//printf("Done with Ck_pL_Ledni_Usmani\n");
  
     //Ck_pp_Decomposition("Gauss");
