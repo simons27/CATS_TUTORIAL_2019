@@ -357,7 +357,8 @@ void Basics_LambdaLambda(){
 // starting from copy of Basics_ProtonLambda():
     const unsigned NumMomBins = 60;
     const double kMin = 0;
-    const double kMax = 240;
+    //const double kMax = 240;
+    const double kMax = 100;
 	class TCanvas;
 	Bool_t UseDummy = false;
 	Double_t VarFactorLower = 0.5;
@@ -386,11 +387,16 @@ void Basics_LambdaLambda(){
     Kitty_LL.SetExcludeFailedBins(false);
     Kitty_LL.SetQ1Q2(0);
     Kitty_LL.SetPdgId(3122, 3122);
-    Kitty_LL.SetRedMass( (Mass_L*Mass_L)/(Mass_L+Mass_L) );
-    Kitty_LL.SetNumChannels(1);
+	Kitty_LL.SetQuantumStatistics(true);
+    //Kitty_LL.SetRedMass( (Mass_L*Mass_L)/(Mass_L+Mass_L) );
+    Kitty_LL.SetRedMass(0.5 * Mass_L );
+    Kitty_LL.SetNumChannels(2);
     Kitty_LL.SetNumPW(0,1);
+    Kitty_LL.SetNumPW(1,1);
     Kitty_LL.SetSpin(0,0);	// TODO: figure out which spin I have to set here
-    Kitty_LL.SetChannelWeight(0, 1.);
+    Kitty_LL.SetSpin(1,1);	// TODO: figure out which spin I have to set here
+    Kitty_LL.SetChannelWeight(0, 1./4.);
+    Kitty_LL.SetChannelWeight(1, 3./4.);
 
 	// will I need this object??? -> Should probably use this to pass the potential parameters for the double gaussian parameterized potentials
     CATSparameters POT_PARS_LL(CATSparameters::tPotential,5,true);
@@ -428,7 +434,7 @@ void Basics_LambdaLambda(){
     //POT_PARS_3S1.SetParameter(3,0.2);
     //WhichChannel,WhichPW,PotentialFunction,Parameters
     Kitty_LL.SetShortRangePotential(0,0,Basics_Potential_DoubleGaussLambda,POT_PARS_LL);
-    //Kitty_pL.SetShortRangePotential(1,0,Basics_Potential_Usmani,POT_PARS_3S1);
+    //Kitty_LL.SetShortRangePotential(1,0,Basics_Potential_DoubleGaussLambda,POT_PARS_LL);
     Kitty_LL.SetMaxNumThreads(5);
     Kitty_LL.KillTheCat();
 
@@ -457,17 +463,20 @@ void Basics_LambdaLambda(){
 	//
 
     TF1* FITTER_LL = new TF1("FITTER_LL",CATS_FIT_LL,kMin,kMax,7);
-    FITTER_LL->SetParameter(0,1);FITTER_LL->SetParLimits(0,0.5,2);
-    FITTER_LL->SetParameter(1,0.5);FITTER_LL->SetParLimits(1,0,1);
-    FITTER_LL->SetParameter(2,SOURCE_PARS.GetParameter(0));FITTER_LL->SetParLimits(2,0.5,3);
+    // FITTER_LL->SetParameter(0,1);FITTER_LL->SetParLimits(0,0.5,2);
+    FITTER_LL->SetParameter(0,1);FITTER_LL->SetParLimits(0,0.2,5);
+    // FITTER_LL->SetParameter(1,0.5);FITTER_LL->SetParLimits(1,0,1);
+    FITTER_LL->SetParameter(1,0.3);FITTER_LL->SetParLimits(1,0,1);
+    // FITTER_LL->SetParameter(2,SOURCE_PARS.GetParameter(0));FITTER_LL->SetParLimits(2,0.5,3);
+    FITTER_LL->SetParameter(2,SOURCE_PARS.GetParameter(0));FITTER_LL->SetParLimits(2,0.5,20);
     
 	FITTER_LL->SetParameter(3,POT_PARS_LL.GetParameter(1));FITTER_LL->SetParLimits(3,VarFactorLower*POT_PARS_LL.GetParameter(1),VarFactorUpper*POT_PARS_LL.GetParameter(1)); // originally at 0.99 and 1.01 respectively -> made wider
     FITTER_LL->SetParameter(4,POT_PARS_LL.GetParameter(2));FITTER_LL->SetParLimits(4,VarFactorLower*POT_PARS_LL.GetParameter(2),VarFactorUpper*POT_PARS_LL.GetParameter(2));
     FITTER_LL->SetParameter(5,POT_PARS_LL.GetParameter(3));FITTER_LL->SetParLimits(5,VarFactorLower*POT_PARS_LL.GetParameter(3),VarFactorUpper*POT_PARS_LL.GetParameter(3));
     FITTER_LL->SetParameter(6,POT_PARS_LL.GetParameter(4));FITTER_LL->SetParLimits(6,VarFactorLower*POT_PARS_LL.GetParameter(4),VarFactorUpper*POT_PARS_LL.GetParameter(4));
 
-    //FITTER_LL->FixParameter(0,1);
-    //FITTER_LL->FixParameter(1,1); // old: 0.6
+    //FITTER_LL->FixParameter(0,1.2);  // old: 1.0
+    //FITTER_LL->FixParameter(1,0.32); // old: 0.6
     //FITTER_LL->FixParameter(2,0.85); // old: 0.6
     FITTER_LL->FixParameter(3,POT_PARS_LL.GetParameter(1));
     FITTER_LL->FixParameter(4,POT_PARS_LL.GetParameter(2));
@@ -476,7 +485,7 @@ void Basics_LambdaLambda(){
 	
 
     //hInputLL->Fit(FITTER_LL,"S, N, R, M");
-    hInputRescaled->Fit(FITTER_LL,"S, N, R, M");
+    hInputRescaled->Fit(FITTER_LL,"S, R, M");
 	//Descriptions of Options from: https://root.cern.ch/root/htmldoc/guides/users-guide/FittingHistograms.html
 	//"S": The result of the fit is returned in the TFitResultPtr
 	//"N": Do not store the graphics function, donot draw
